@@ -233,13 +233,9 @@ foreach ( $posts_array as $post ) {
     // Example: /rant/enjoying-a-roaming-free-europe/
     $categories = get_the_category($post->ID);
     foreach ($categories as $category) {
-        $search = $category->slug . '/' . $post->post_name;
+        $search = "/" . $category->slug . "/" . $post->post_name;
         break;
     }
-
-    print_r($search);
-
-    die();
 
     $collector = new CollectMastodonData($config);
     $results = $collector->findToots($search);
@@ -278,6 +274,7 @@ foreach ( $posts_array as $post ) {
                     );
 
                     // Check if it's me, then add my email
+                    print_r($status['account']); die();
 
 
                     $comment_parent_id = wp_insert_comment( $commentdata, true);
