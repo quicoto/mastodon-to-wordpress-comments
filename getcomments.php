@@ -261,6 +261,12 @@ foreach ( $posts_array as $post ) {
                 } else {
                     // Does not exist, create a new parent comment
                     $toot_url = $status['url'];
+
+                    if ($toot_url === "https://mastodon.social/@ricard_dev/100901327762546785") {
+                        print_r($status);
+                        die();
+                    }
+
                     $content = removeTag($status['content'], 'span') . '<br><br><a href="'. $toot_url .'" rel="nofollow">Original Toot</a>';
                     $commentdata = array(
                         'comment_post_ID' => $post->ID,
@@ -304,12 +310,6 @@ foreach ( $posts_array as $post ) {
                             // No replies with this ID
                             // Let's add the comment as reply to the main one
                             $toot_url = $reply['url'];
-
-                            if ($toot_url === "https://mastodon.social/users/ricard_dev/statuses/100673387377903391") {
-                                print_r($reply);
-                                die();
-                            }
-
                             $content = removeTag($reply['toot'], 'span') . '<br><br><a href="'. $toot_url .'" rel="nofollow">Original Toot</a>';
                             $commentdata = array(
                                 'comment_post_ID' => $post->ID,
