@@ -20,7 +20,8 @@
  */
 
 require_once 'Mastodon_api.php';
-require_once '../../mastodon.feed/config.php';
+require_once '../mastodon_config.php';
+include_once("../wp-load.php");
 
 class CollectMastodonData {
 
@@ -68,23 +69,26 @@ class CollectMastodonData {
         }
     }
 
-    private function filterComments($descendants, $root, &$result) {
+    private function filterComments($descendants, $root) {
+        $results = [];
+
         foreach ($descendants as $d) {
-            $result['comments'][$d['id']] = [
+            $results[$d['id']] = [
                 'author' => [
                     'display_name' => $d['account']['display_name'] ? $d['account']['display_name'] : $d['account']['username'],
                     'avatar' => $d['account']['avatar_static'],
                     'url' => $d['account']['url']
                 ],
                 'toot' => $d['content'],
+                'toot_id' => $d['id'],
                 'date' => $d['created_at'],
                 'url' => $d['uri'],
                 'reply_to' => $d['in_reply_to_id'],
-                'root' => $root,
+                'root' => $root
             ];
         }
 
-        return $result;
+        return $results;
     }
 
     private function filterStats($stats) {
@@ -122,7 +126,10 @@ class CollectMastodonData {
                 return json_decode($resultJSON);
             }
         }
-        $result = $this->filterSearchResults($this->api->search(['q' => $search]));
+
+        // $result = $this->filterSearchResults($this->api->search(['q' => $search]));
+        $result = $this->api->search(['q' => $search]);
+
         if ($this->redis) {
             $this->redis->set("roots/$search", json_encode($result));
             $this->redis->expire("roots/$search", isset($result[0]) ? $this->rootThreshold : $this->threshold);
@@ -130,10 +137,10 @@ class CollectMastodonData {
         return $result;
     }
 
-    public function getComments($id, &$result) {
+    public function getComments($id) {
         $raw = file_get_contents("https://mastodon.social/api/v1/statuses/$id/context");
         $json = json_decode($raw, true);
-        $this->filterComments($json['descendants'], $id, $result);
+        return $this->filterComments($json['descendants'], $id);
     }
 
     public function getStatistics($id, &$result) {
@@ -181,45 +188,98 @@ class CollectMastodonData {
     }
 }
 
-$result = ['comments' => [], 'stats' => ['reblogs' => 0, 'favs' => 0, 'replies' => 0, 'url' => '', 'root' => 0]];
 
-$search = isset($_GET['search']) ? $_GET['search'] : '';
-$collector = new CollectMastodonData($config);
-$ids = [];
-if (!empty($search)) {
-    $oldCollection = $collector->getCachedCollection($search);
-    if (empty($oldCollection)) {
-        $ids = $collector->findToots($search);
-        $result['stats']['root'] = isset($ids[0]) ? $ids[0] : 0;
-        foreach ($ids as $id) {
-            // get comments
-            $newComments = $collector->getComments($id, $result);
-            // get statistics (likes, replies, boosts,...)
-            $collector->getStatistics($id, $result);
-            // FIXME: At the moment the API doesn't return the correct replies count so I count it manually
-            $result['stats']['replies'] = count($result['comments']);
+// Define the Comment Meta Key
+$comment_meta_key = "toot_id";
+
+// get_posts the latest 50 posts
+// The API limit should be 300 request in 5 minutes
+// Quering the latest 50 posts should be enough. No need to add comments to those old posts.
+$args = array(
+	'posts_per_page'   => 1,
+	'orderby'          => 'date',
+	'order'            => 'DESC',
+	'post_type'        => 'post',
+	'post_status'      => 'publish'
+);
+$posts_array = get_posts( $args );
+
+foreach ( $posts_array as $post ) {
+    setup_postdata( $post );
+
+    // Here we should ge the current POST url and pass it as the $search, just the slug.
+    // If you try with the full URL it doesn't find it. It seems a limitation from Mastodon itself.
+    // Example: /rant/enjoying-a-roaming-free-europe/
+    $search = $post->post_name;
+    $collector = new CollectMastodonData($config);
+    $results = $collector->findToots($search);
+
+    if ($results['html']['statuses'] && sizeof($results['html']['statuses'])) {
+        foreach ( $results['html']['statuses'] as $status ) {
+            if ($status['visibility'] === "public") {
+                // Check if a comment with the toot_id already exists
+                $args = array(
+                    'meta_key' => $comment_meta_key,
+                    'meta_value' => $status['id']
+                );
+                $comments_query = new WP_Comment_Query;
+                $comments = $comments_query->query( $args );
+
+                if ( $comments ) {
+                    // It exist, we'll use it as parent in case the toot has replies
+                    $comment_parent_id = $comments[0]['commend_ID'];
+                } else {
+                    // Does not exist, create a new parent comment
+                    // https://codex.wordpress.org/Function_Reference/wp_new_comment
+                    $commentdata = array(
+                        'comment_post_ID' => $post->ID,
+                        'comment_author' => $status['account']['display_name'],
+                        'comment_author_url' => $status['url'],
+                        'comment_content' => $status['content'],
+                        'comment_date' => $status['created_at'],
+                        'comment_parent' => 0 // 0 if it's not a reply to another comment
+                    );
+                    $comment_parent_id = wp_new_comment( $commentdata, true);
+
+                    // Use comment meta to store the toot id
+                    // https://codex.wordpress.org/Function_Reference/add_comment_meta
+                    add_comment_meta( $comment_parent_id, $comment_meta_key, $status['id'], false );
+                }
+
+                // Find if the toot has replies
+                $replies = $collector->getComments($status['id'], $results);
+
+                if (sizeof($replies)) {
+                    foreach ( $replies as $reply ) {
+                        // Check if a reply comment with the toot_id already exists
+                        $args = array(
+                            'meta_key' => $comment_meta_key,
+                            'meta_value' => $reply['toot_id']
+                        );
+                        $comments_query = new WP_Comment_Query;
+                        $comments = $comments_query->query( $args );
+
+                        if ( !$comments ) {
+                            // No replies with this ID
+                            // Let's add the comment as reply to the main one
+                            $commentdata = array(
+                                'comment_post_ID' => $post->ID, // to which post the comment will show up
+                                'comment_author' => $reply['author']['display_name'], //fixed value - can be dynamic
+                                'comment_author_url' => $reply['author']['url'], //fixed value - can be dynamic
+                                'comment_content' => $reply['toot'], //fixed value - can be dynamic
+                                'comment_date' => $status['date'],
+                                'comment_parent' => $comment_parent_id
+                            );
+                            $comment_id = wp_new_comment( $commentdata, true);
+
+                            // Use comment meta to store the toot id
+                            // https://codex.wordpress.org/Function_Reference/add_comment_meta
+                            add_comment_meta( $comment_id, $comment_meta_key, $reply['toot_id'], false );
+                        }
+                    }
+                }
+            }
         }
-        $result['timestamp'] = time();
-        $collector->storeCollection($search, $result);
-    } else {
-        $result = $oldCollection;
     }
 }
-
-// headers for not caching the results
-$mod_gmt = gmdate("D, d M Y H:i:s \G\M\T", $result['timestamp']);
-$exp_gmt = gmdate("D, d M Y H:i:s \G\M\T", $result['timestamp'] + $collector->threshold);
-$max_age = $result['timestamp'] + $collector->threshold - time();
-header("Expires: " . $exp_gmt);
-header("Last-Modified: " . $mod_gmt);
-header("Cache-Control: public, max-age=" . $max_age);
-
-// headers to tell that result is JSON
-header('Content-type: application/json');
-$time = microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"];
-header("X-Debugging-Time-Used: $time");
-// send the result now
-$encodedResult = json_encode($result);
-
-header('Content-Length: '.strlen($encodedResult));
-echo $encodedResult;
+wp_reset_postdata();
