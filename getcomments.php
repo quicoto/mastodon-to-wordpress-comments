@@ -231,7 +231,16 @@ foreach ( $posts_array as $post ) {
     // Here we should ge the current POST url and pass it as the $search, just the slug.
     // If you try with the full URL it doesn't find it. It seems a limitation from Mastodon itself.
     // Example: /rant/enjoying-a-roaming-free-europe/
-    $search = $post->post_name;
+    $categories = get_the_category($post->ID);
+    foreach ($categories as $category) {
+        $search = $category->slug . '/' . $post->post_name;
+        break;
+    }
+
+    print_r($search);
+
+    die();
+
     $collector = new CollectMastodonData($config);
     $results = $collector->findToots($search);
 
@@ -267,6 +276,10 @@ foreach ( $posts_array as $post ) {
                         'comment_approved' => 1,
                         'comment_parent' => 0 // 0 if it's not a reply to another comment
                     );
+
+                    // Check if it's me, then add my email
+
+
                     $comment_parent_id = wp_insert_comment( $commentdata, true);
 
                     // Use comment meta to store the toot id
