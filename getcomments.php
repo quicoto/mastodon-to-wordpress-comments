@@ -304,6 +304,12 @@ foreach ( $posts_array as $post ) {
                             // No replies with this ID
                             // Let's add the comment as reply to the main one
                             $toot_url = $reply['url'];
+
+                            if ($toot_url === "https://mastodon.social/users/ricard_dev/statuses/100673387377903391") {
+                                print_r($reply);
+                                die();
+                            }
+
                             $content = removeTag($reply['toot'], 'span') . '<br><br><a href="'. $toot_url .'" rel="nofollow">Original Toot</a>';
                             $commentdata = array(
                                 'comment_post_ID' => $post->ID,
@@ -316,7 +322,7 @@ foreach ( $posts_array as $post ) {
                             );
 
                             // Check if it's me, then add my email
-                            if ($reply['account']['username'] === "ricard_dev") {
+                            if ($reply['author']['username'] === "ricard_dev") {
                                 $commentdata['comment_author_email'] = "torres.rick@gmail.com";
                             }
 
