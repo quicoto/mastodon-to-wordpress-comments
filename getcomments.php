@@ -260,7 +260,6 @@ foreach ( $posts_array as $post ) {
                     }
                 } else {
                     // Does not exist, create a new parent comment
-                    // https://codex.wordpress.org/Function_Reference/wp_new_comment
                     $toot_url = $status['url'];
                     $content = removeTag($status['content'], 'span') . '<br><br><a href="'. $toot_url .'" rel="nofollow">Original Toot</a>';
                     $commentdata = array(
@@ -274,9 +273,13 @@ foreach ( $posts_array as $post ) {
                     );
 
                     // Check if it's me, then add my email
-                    print_r($status['account']); die();
+                    if ($status['account']['username'] === "ricard_dev") {
+                        $commentdata['comment_author_email'] = "torres.rick@gmail.com";
+                    }
 
+                    print_r($args); die();
 
+                    // https://codex.wordpress.org/Function_Reference/wp_insert_comment
                     $comment_parent_id = wp_insert_comment( $commentdata, true);
 
                     // Use comment meta to store the toot id
