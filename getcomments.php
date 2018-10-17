@@ -194,7 +194,27 @@ function removeTag($content, $tagName) {
     $dom->loadHTML($content);
 
     $nodes = $dom->getElementsByTagName($tagName);
+    while ($node = $nodes->item(0)) {
+        $replacement = $dom->createDocumentFragment();
+        while ($inner = $node->childNodes->item(0)) {
+            $replacement->appendChild($inner);
+        }
+        $node->parentNode->replaceChild($replacement, $node);
+    }
 
+    # remove <!DOCTYPE
+    $dom->removeChild($dom->doctype);
+
+    $nodes = $dom->getElementsByTagName('html');
+    while ($node = $nodes->item(0)) {
+        $replacement = $dom->createDocumentFragment();
+        while ($inner = $node->childNodes->item(0)) {
+            $replacement->appendChild($inner);
+        }
+        $node->parentNode->replaceChild($replacement, $node);
+    }
+
+    $nodes = $dom->getElementsByTagName('body');
     while ($node = $nodes->item(0)) {
         $replacement = $dom->createDocumentFragment();
         while ($inner = $node->childNodes->item(0)) {
