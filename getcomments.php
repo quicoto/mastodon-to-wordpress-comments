@@ -243,7 +243,7 @@ foreach ( $posts_array as $post ) {
                     $commentdata = array(
                         'comment_post_ID' => $post->ID,
                         'comment_author' => $status['account']['display_name'],
-                        'comment_author_url' => $status['account']['display_name'],
+                        'comment_author_url' => $status['account']['url'],
                         'comment_content' => $content,
                         'comment_date' => $status['created_at'],
                         'comment_approved' => 1,
