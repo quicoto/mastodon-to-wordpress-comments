@@ -192,6 +192,9 @@ class CollectMastodonData {
 // Define the Comment Meta Key
 $comment_meta_key = "toot_id";
 
+// For my email notification
+$posts_with_new_comments = [];
+
 // get_posts the latest 50 posts
 // The API limit should be 300 request in 5 minutes
 // Quering the latest 50 posts should be enough. No need to add comments to those old posts.
@@ -244,6 +247,8 @@ foreach ( $posts_array as $post ) {
                     // Use comment meta to store the toot id
                     // https://codex.wordpress.org/Function_Reference/add_comment_meta
                     add_comment_meta( $comment_parent_id, $comment_meta_key, $status['id'], false );
+
+                    array_push($posts_with_new_comments, get_permalink($post->ID));
                 }
 
                 // Find if the toot has replies
@@ -275,6 +280,8 @@ foreach ( $posts_array as $post ) {
                             // Use comment meta to store the toot id
                             // https://codex.wordpress.org/Function_Reference/add_comment_meta
                             add_comment_meta( $comment_id, $comment_meta_key, $reply['toot_id'], false );
+
+                            array_push($posts_with_new_comments, get_permalink($post->ID));
                         }
                     }
                 }
@@ -283,3 +290,11 @@ foreach ( $posts_array as $post ) {
     }
 }
 wp_reset_postdata();
+
+// Email me a notification
+$email_content = "";
+foreach ($posts_with_new_comments as $post) {
+    $email_content .= $post . "\n";
+}
+
+mail("torres.rick@gmail.com", "New Comments", $email_content);
