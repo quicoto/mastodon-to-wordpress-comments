@@ -191,7 +191,7 @@ class CollectMastodonData {
 
 function removeTag($content, $tagName) {
     $dom = new DOMDocument();
-    $dom->loadHTML($content);
+    $dom->loadHTML('<?xml encoding="utf-8" ?>' . $content);
 
     $nodes = $dom->getElementsByTagName($tagName);
     while ($node = $nodes->item(0)) {
@@ -223,9 +223,8 @@ function removeTag($content, $tagName) {
         $node->parentNode->replaceChild($replacement, $node);
     }
 
-    return $dom->saveHTML();
+    return str_replace('<?xml encoding="utf-8" ?>', '', $dom->saveHTML());
 }
-
 
 // Define the Comment Meta Key
 $comment_meta_key = "toot_id";
@@ -233,11 +232,11 @@ $comment_meta_key = "toot_id";
 // For my email notification
 $posts_with_new_comments = [];
 
-// get_posts the latest 50 posts
+// get_posts the latest 25 posts
 // The API limit should be 300 request in 5 minutes
-// Quering the latest 50 posts should be enough. No need to add comments to those old posts.
+// Quering the latest 25 posts should be enough. No need to add comments to those old posts.
 $args = array(
-	'posts_per_page'   => 50,
+	'posts_per_page'   => 25,
 	'orderby'          => 'date',
 	'order'            => 'DESC',
 	'post_type'        => 'post',
