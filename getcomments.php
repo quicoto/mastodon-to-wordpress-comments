@@ -76,13 +76,14 @@ class CollectMastodonData {
             $results[$d['id']] = [
                 'author' => [
                     'display_name' => $d['account']['display_name'] ? $d['account']['display_name'] : $d['account']['username'],
+                    'username' => $d['account']['username'],
                     'avatar' => $d['account']['avatar_static'],
                     'url' => $d['account']['url']
                 ],
                 'toot' => $d['content'],
                 'toot_id' => $d['id'],
                 'date' => $d['created_at'],
-                'url' => $d['uri'],
+                'url' => $d['url'],
                 'reply_to' => $d['in_reply_to_id'],
                 'root' => $root
             ];
