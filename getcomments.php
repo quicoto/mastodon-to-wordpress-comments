@@ -263,7 +263,7 @@ foreach ( $posts_array as $post ) {
                     $toot_url = $status['url'];
 
                     if ($toot_url === "https://mastodon.social/@ricard_dev/100901327762546785") {
-                        print_r(removeTag($status['content'], 'span'));
+                        print_r($status);
                         die();
                     }
 
