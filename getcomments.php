@@ -277,7 +277,7 @@ foreach ( $posts_array as $post ) {
                         $commentdata['comment_author_email'] = "torres.rick@gmail.com";
                     }
 
-                    print_r($args); die();
+                    print_r($commentdata); die();
 
                     // https://codex.wordpress.org/Function_Reference/wp_insert_comment
                     $comment_parent_id = wp_insert_comment( $commentdata, true);
