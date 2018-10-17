@@ -217,7 +217,7 @@ $posts_with_new_comments = [];
 // The API limit should be 300 request in 5 minutes
 // Quering the latest 50 posts should be enough. No need to add comments to those old posts.
 $args = array(
-	'posts_per_page'   => 1,
+	'posts_per_page'   => 50,
 	'orderby'          => 'date',
 	'order'            => 'DESC',
 	'post_type'        => 'post',
