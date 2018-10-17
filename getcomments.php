@@ -225,24 +225,31 @@ foreach ( $posts_array as $post ) {
                     'meta_key' => $comment_meta_key,
                     'meta_value' => $status['id']
                 );
+                // https://codex.wordpress.org/Class_Reference/WP_Comment_Query
                 $comments_query = new WP_Comment_Query;
                 $comments = $comments_query->query( $args );
 
                 if ( $comments ) {
                     // It exist, we'll use it as parent in case the toot has replies
-                    $comment_parent_id = $comments[0]['commend_ID'];
+                    foreach ( $comments as $comment ) {
+                        $comment_parent_id = $comment->commend_ID;
+                        break;
+                    }
                 } else {
                     // Does not exist, create a new parent comment
                     // https://codex.wordpress.org/Function_Reference/wp_new_comment
+                    $toot_url = $status['url'];
+                    $content = $status['content'] . "<br><br><a href='". $toot_url ."' rel='nofollow'>Original Toot</a>";
                     $commentdata = array(
                         'comment_post_ID' => $post->ID,
                         'comment_author' => $status['account']['display_name'],
-                        'comment_author_url' => $status['url'],
-                        'comment_content' => $status['content'],
+                        'comment_author_url' => $status['account']['display_name'],
+                        'comment_content' => $content,
                         'comment_date' => $status['created_at'],
+                        'comment_approved' => 1,
                         'comment_parent' => 0 // 0 if it's not a reply to another comment
                     );
-                    $comment_parent_id = wp_new_comment( $commentdata, true);
+                    $comment_parent_id = wp_insert_comment( $commentdata, true);
 
                     // Use comment meta to store the toot id
                     // https://codex.wordpress.org/Function_Reference/add_comment_meta
@@ -267,15 +274,18 @@ foreach ( $posts_array as $post ) {
                         if ( !$comments ) {
                             // No replies with this ID
                             // Let's add the comment as reply to the main one
+                            $toot_url = $reply['url'];
+                            $content = $reply['toot'] . "<br><br><a href='". $toot_url ."' rel='nofollow'>Original Toot</a>";
                             $commentdata = array(
-                                'comment_post_ID' => $post->ID, // to which post the comment will show up
-                                'comment_author' => $reply['author']['display_name'], //fixed value - can be dynamic
-                                'comment_author_url' => $reply['author']['url'], //fixed value - can be dynamic
-                                'comment_content' => $reply['toot'], //fixed value - can be dynamic
+                                'comment_post_ID' => $post->ID,
+                                'comment_author' => $reply['author']['display_name'],
+                                'comment_author_url' => $reply['author']['url'],
+                                'comment_content' => $content,
                                 'comment_date' => $status['date'],
+                                'comment_approved' => 1,
                                 'comment_parent' => $comment_parent_id
                             );
-                            $comment_id = wp_new_comment( $commentdata, true);
+                            $comment_id = wp_insert_comment( $commentdata, true);
 
                             // Use comment meta to store the toot id
                             // https://codex.wordpress.org/Function_Reference/add_comment_meta
