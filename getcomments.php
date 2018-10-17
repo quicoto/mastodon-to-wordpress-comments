@@ -189,6 +189,24 @@ class CollectMastodonData {
 }
 
 
+function removeTag($content, $tagName) {
+    $dom = new DOMDocument();
+    $dom->loadXML($content);
+
+    $nodes = $dom->getElementsByTagName($tagName);
+
+    while ($node = $nodes->item(0)) {
+        $replacement = $dom->createDocumentFragment();
+        while ($inner = $node->childNodes->item(0)) {
+            $replacement->appendChild($inner);
+        }
+        $node->parentNode->replaceChild($replacement, $node);
+    }
+
+    return $dom->saveHTML();
+}
+
+
 // Define the Comment Meta Key
 $comment_meta_key = "toot_id";
 
@@ -239,7 +257,7 @@ foreach ( $posts_array as $post ) {
                     // Does not exist, create a new parent comment
                     // https://codex.wordpress.org/Function_Reference/wp_new_comment
                     $toot_url = $status['url'];
-                    $content = apply_filters('the_content', $status['content']) . '<br><br><a href="'. $toot_url .'" rel="nofollow">Original Toot</a>';
+                    $content = removeTag($status['content'], 'span') . '<br><br><a href="'. $toot_url .'" rel="nofollow">Original Toot</a>';
                     $commentdata = array(
                         'comment_post_ID' => $post->ID,
                         'comment_author' => $status['account']['display_name'],
@@ -275,7 +293,7 @@ foreach ( $posts_array as $post ) {
                             // No replies with this ID
                             // Let's add the comment as reply to the main one
                             $toot_url = $reply['url'];
-                            $content = apply_filters('the_content', $reply['toot']) . '<br><br><a href="'. $toot_url .'" rel="nofollow">Original Toot</a>';
+                            $content = removeTag($reply['toot'], 'span') . '<br><br><a href="'. $toot_url .'" rel="nofollow">Original Toot</a>';
                             $commentdata = array(
                                 'comment_post_ID' => $post->ID,
                                 'comment_author' => $reply['author']['display_name'],
