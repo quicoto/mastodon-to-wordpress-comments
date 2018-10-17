@@ -191,7 +191,7 @@ class CollectMastodonData {
 
 function removeTag($content, $tagName) {
     $dom = new DOMDocument();
-    $dom->loadXML($content);
+    $dom->loadHTML($content);
 
     $nodes = $dom->getElementsByTagName($tagName);
 
@@ -261,12 +261,6 @@ foreach ( $posts_array as $post ) {
                 } else {
                     // Does not exist, create a new parent comment
                     $toot_url = $status['url'];
-
-                    if ($toot_url === "https://mastodon.social/@ricard_dev/100901327762546785") {
-                        print_r($status);
-                        die();
-                    }
-
                     $content = removeTag($status['content'], 'span') . '<br><br><a href="'. $toot_url .'" rel="nofollow">Original Toot</a>';
                     $commentdata = array(
                         'comment_post_ID' => $post->ID,
