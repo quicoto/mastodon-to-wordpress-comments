@@ -362,4 +362,6 @@ foreach ($posts_with_new_comments as $post) {
     $email_content .= $post . "\n";
 }
 
-mail("torres.rick@gmail.com", "New Comments", $email_content);
+if ($email_content !== "") {
+    mail("torres.rick@gmail.com", "New Comments", $email_content);
+}
